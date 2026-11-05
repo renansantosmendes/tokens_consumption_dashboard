@@ -114,7 +114,9 @@ def build_dashboard(
     daily: list[dict[str, Any]],
     operations: list[dict[str, Any]],
     users: list[dict[str, Any]],
-    usd_brl: float,
+    sources: list[str],
+    student_names: dict[str, str] | None = None,
+    usd_brl: float = 0.0,
     rate_date: str | None,
     start: date,
     end: date,
@@ -180,6 +182,7 @@ def build_dashboard(
     user_rows = [
         {
             "user_id": str(row["userId"]),
+            "name": (student_names or {}).get(str(row["userId"])),
             "cost_brl": _brl(_number(row.get("sum_totalCost")), usd_brl),
             "tokens": int(_number(row.get("sum_totalTokens"))),
         }
@@ -188,6 +191,7 @@ def build_dashboard(
     ][:TOP_USERS]
     return {
         "generated_at": generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "sources": sources,
         "window": {"start": start.isoformat(), "end": end.isoformat()},
         "exchange": {"usd_brl": usd_brl, "rate_date": rate_date},
         "totals": {

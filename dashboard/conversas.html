@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversas dos alunos · Proxy</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
+    .toolbar label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 0.8rem; }
+    .toolbar select, .toolbar input {
+      background: var(--bg); color: var(--text); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; min-width: 200px;
+    }
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .list { max-height: 72vh; overflow-y: auto; }
+    .item {
+      display: block; width: 100%; text-align: left; background: transparent; color: var(--text);
+      border: 0; border-bottom: 1px solid var(--line); padding: 10px 6px; cursor: pointer; font: inherit;
+    }
+    .item:hover, .item[aria-selected="true"] { background: rgba(110, 168, 255, 0.08); }
+    .item .meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+    .item .q { font-weight: 600; font-size: 0.92rem; }
+    .item .a { color: var(--muted); font-size: 0.86rem; margin-top: 2px; }
+    .msg { border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; white-space: pre-wrap; line-height: 1.45; font-size: 0.92rem; }
+    .msg.user { background: rgba(110, 168, 255, 0.12); border: 1px solid rgba(110, 168, 255, 0.3); }
+    .msg.assistant { background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .msg.system { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); color: var(--muted); }
+    .role { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+    .status { color: var(--muted); padding: 12px 6px; }
+    .error { color: #f87171; padding: 12px 6px; }
+    @media (max-width: 760px) { .split { grid-template-columns: 1fr; } .list { max-height: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Conversas dos alunos</h1>
+        <p class="muted">Perguntas enviadas ao modelo pelo proxy e as respostas. Lidas do Langfuse ao abrir, sem serem salvas em arquivo.</p>
+      </div>
+      <a class="muted" href="index.html">← Painel de consumo</a>
+    </header>
+
+    <section class="card">
+      <div class="toolbar">
+        <label>Aluno
+          <select id="user"></select>
+        </label>
+        <label>Período
+          <select id="days">
+            <option value="1">Último dia</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </label>
+        <label>Quantidade
+          <select id="limit">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        <button id="reload" class="btn">Atualizar</button>
+      </div>
+
+      <div class="split">
+        <div class="list" id="list" role="listbox" aria-label="Conversas"></div>
+        <div id="detail" aria-live="polite">
+          <p class="status">Escolha uma conversa à esquerda para ver o texto completo.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="conversas.js"></script>
+</body>
+</html>

@@ -76,3 +76,36 @@ class LangfuseClient:
         if not isinstance(rows, list):
             raise LangfuseError("Resposta inesperada do Langfuse.")
         return rows
+
+    def observations(self, params: dict[str, Any]) -> list[dict[str, Any]]:
+        """Read generations with their input and output from the v2 observations API.
+
+        Parameters
+        ----------
+        params : dict[str, Any]
+            Query parameters, such as the time window, the user and the limit.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            Observations in the answer, newest first.
+
+        Raises
+        ------
+        LangfuseError
+            When the request fails or the answer is not in the expected format.
+        """
+        query = urllib.parse.urlencode(params)
+        url = f"{self._settings.host}/api/public/v2/observations?{query}"
+        request = urllib.request.Request(url, headers={"Authorization": self._auth_header()})
+        try:
+            with self._opener(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            raise LangfuseError(f"Langfuse respondeu com status {error.code}.") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise LangfuseError("Não foi possível conectar ao Langfuse.") from error
+        rows = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(rows, list):
+            raise LangfuseError("Resposta inesperada do Langfuse.")
+        return rows

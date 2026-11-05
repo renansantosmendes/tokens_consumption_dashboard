@@ -1,19 +1,66 @@
-"""Command that collects the Langfuse metrics and writes the dashboard data."""
+"""Command that collects the Langfuse metrics of each project and writes the dashboard data."""
 
 import argparse
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from dashboard import queries
 from dashboard.exchange import ExchangeRateError, latest_usd_sell_rate
 from dashboard.langfuse_client import LangfuseClient, LangfuseError
+from dashboard.merge import merge_raw
 from dashboard.settings import load_settings
+from dashboard.students import StudentsError, fetch_student_names, load_database_url
 from dashboard.summary import build_dashboard
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ENV = PROJECT_ROOT / ".env"
+DEFAULT_SOURCES = (
+    ("agente", PROJECT_ROOT / ".env"),
+    ("proxy", PROJECT_ROOT / ".env_proxy"),
+)
 DEFAULT_OUTPUT = PROJECT_ROOT / "dashboard" / "data.js"
+
+
+@dataclass(frozen=True)
+class Source:
+    """One Langfuse project to collect from.
+
+    Parameters
+    ----------
+    label : str
+        Name shown in the dashboard, such as ``proxy``.
+    env_path : Path
+        .env file with the keys of that project.
+    """
+
+    label: str
+    env_path: Path
+
+
+def parse_source(text: str) -> Source:
+    """Read a ``ROTULO=CAMINHO`` source given on the command line.
+
+    Parameters
+    ----------
+    text : str
+        Text in the form ``ROTULO=CAMINHO_DO_ENV``.
+
+    Returns
+    -------
+    Source
+        The parsed source.
+
+    Raises
+    ------
+    argparse.ArgumentTypeError
+        When the text does not have the form ``ROTULO=CAMINHO``.
+    """
+    label, sep, path = text.partition("=")
+    if not sep or not label or not path:
+        raise argparse.ArgumentTypeError("use o formato ROTULO=CAMINHO_DO_ENV")
+    return Source(label=label, env_path=Path(path))
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -27,12 +74,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     Returns
     -------
     argparse.Namespace
-        Options: env, days, output and usd_brl.
+        Options: source, days, output and usd_brl.
     """
     parser = argparse.ArgumentParser(
-        description="Build the Langfuse token and cost dashboard data.",
+        description="Build the Langfuse token and cost dashboard data from one or more projects.",
     )
-    parser.add_argument("--env", type=Path, default=DEFAULT_ENV, help="Path of the .env file.")
+    parser.add_argument(
+        "--source",
+        type=parse_source,
+        action="append",
+        default=None,
+        help="Project to collect, as ROTULO=CAMINHO_DO_ENV. Repeat for more projects. "
+        "Default: agente=.env and proxy=.env_proxy.",
+    )
     parser.add_argument(
         "--days", type=int, default=30, help="Length of the window, in days (1 to 90)."
     )
@@ -46,53 +100,64 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="Fixed exchange rate; skips the PTAX lookup.",
     )
     options = parser.parse_args(argv)
+    if options.source is None:
+        options.source = [Source(label, path) for label, path in DEFAULT_SOURCES]
     if not 1 <= options.days <= 90:
         parser.error("--days deve estar entre 1 e 90.")
     return options
 
 
-def collect(
-    client: LangfuseClient,
-    days: int,
-    usd_brl: float,
-    rate_date: str | None,
-    now: datetime,
-) -> dict:
-    """Run every query of the dashboard and build its data.
+def collect_source(client: LangfuseClient, start: str, end: str) -> dict[str, Any]:
+    """Run every query of the dashboard against one project.
 
     Parameters
     ----------
     client : LangfuseClient
         Client of the Langfuse project.
-    days : int
-        Length of the window, in days.
-    usd_brl : float
-        Exchange rate, reais per dollar.
-    rate_date : str | None
-        Date of the exchange rate.
-    now : datetime
-        Reference moment, timezone aware.
+    start : str
+        Start of the window, ISO timestamp.
+    end : str
+        End of the window, ISO timestamp.
 
     Returns
     -------
-    dict
-        Data of the dashboard.
+    dict[str, Any]
+        Raw answers keyed by totals, models, daily, operations and users.
     """
-    start_text, end_text = queries.window(now, days)
-    start = datetime.strptime(start_text, "%Y-%m-%dT%H:%M:%SZ").date()
-    end = now.date()
-    return build_dashboard(
-        totals=(client.metrics(queries.totals(start_text, end_text)) or [{}])[0],
-        models=client.metrics(queries.by_model(start_text, end_text)),
-        daily=client.metrics(queries.daily(start_text, end_text)),
-        operations=client.metrics(queries.latency_by_operation(start_text, end_text)),
-        users=client.metrics(queries.cost_by_user(start_text, end_text)),
-        usd_brl=usd_brl,
-        rate_date=rate_date,
-        start=start,
-        end=end,
-        generated_at=now,
-    )
+    return {
+        "totals": (client.metrics(queries.totals(start, end)) or [{}])[0],
+        "models": client.metrics(queries.by_model(start, end)),
+        "daily": client.metrics(queries.daily(start, end)),
+        "operations": client.metrics(queries.latency_by_operation(start, end)),
+        "users": client.metrics(queries.cost_by_user(start, end)),
+    }
+
+
+def load_names_or_warn(sources: list[Source]) -> dict[str, str]:
+    """Read the student names from the first source that defines the database URL.
+
+    Parameters
+    ----------
+    sources : list[Source]
+        Projects, in order of preference.
+
+    Returns
+    -------
+    dict[str, str]
+        Name of each registration number; empty when no database can be read.
+    """
+    for source in sources:
+        try:
+            url = load_database_url(source.env_path)
+        except StudentsError:
+            continue
+        try:
+            return fetch_student_names(url)
+        except StudentsError as error:
+            print(f"Aviso: {error} Os nomes não serão exibidos.")
+            return {}
+    print("Aviso: nenhum .env define NEON_DATABASE_URL. Os nomes não serão exibidos.")
+    return {}
 
 
 def write_data(data: dict, output: Path) -> None:
@@ -115,7 +180,7 @@ def write_data(data: dict, output: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Collect the data and write the dashboard file.
+    """Collect the data of every project and write the dashboard file.
 
     Parameters
     ----------
@@ -125,29 +190,46 @@ def main(argv: list[str] | None = None) -> int:
     Returns
     -------
     int
-        0 on success, 1 when a service cannot be used.
+        0 on success, 1 when a project or a service cannot be used.
     """
     options = parse_args(argv)
-    try:
-        settings = load_settings(options.env)
-    except KeyError as error:
-        print(f"Variáveis ausentes no .env: {error.args[0]}")
-        return 1
     now = datetime.now(timezone.utc)
+    start_text, end_text = queries.window(now, options.days)
+    try:
+        clients = [
+            (source.label, LangfuseClient(load_settings(source.env_path)))
+            for source in options.source
+        ]
+    except (KeyError, FileNotFoundError) as error:
+        print(f"Erro ao ler o .env de um projeto: {error}")
+        return 1
     try:
         if options.usd_brl is not None:
             usd_brl, rate_date = options.usd_brl, None
         else:
             usd_brl, rate_date = latest_usd_sell_rate(now.date())
-        data = collect(LangfuseClient(settings), options.days, usd_brl, rate_date, now)
+        raw_sources = [
+            collect_source(client, start_text, end_text) for _label, client in clients
+        ]
     except (LangfuseError, ExchangeRateError) as error:
         print(str(error))
         return 1
+    student_names = load_names_or_warn(options.source)
+    data = build_dashboard(
+        **merge_raw(raw_sources),
+        sources=[label for label, _client in clients],
+        student_names=student_names,
+        usd_brl=usd_brl,
+        rate_date=rate_date,
+        start=datetime.strptime(start_text, "%Y-%m-%dT%H:%M:%SZ").date(),
+        end=now.date(),
+        generated_at=now,
+    )
     write_data(data, options.output)
     totals = data["totals"]
     print(
-        f"Dados gravados em {options.output} "
-        f"({totals['calls']} chamadas, R$ {totals['cost_brl']:.2f})."
+        f"Dados gravados em {options.output} ({', '.join(data['sources'])}): "
+        f"{totals['calls']} chamadas, R$ {totals['cost_brl']:.2f}."
     )
     return 0
 

@@ -27,6 +27,7 @@
   function renderHeader() {
     document.getElementById("window").textContent =
       "Janela: " + formatDate(data.window.start) + " a " + formatDate(data.window.end) +
+      " · Fontes: " + (data.sources || []).join(", ") +
       " · Dólar PTAX de venda: R$ " + data.exchange.usd_brl.toLocaleString("pt-BR", { minimumFractionDigits: 4 });
     document.getElementById("generated").textContent = "Dados gerados em " + data.generated_at.replace("T", " ").replace("Z", " UTC");
   }
@@ -118,14 +119,15 @@
     var max = Math.max.apply(null, data.users.map(function (u) { return u.tokens; })) || 1;
     var table = el("table");
     var head = el("tr");
-    ["Usuário", "Tokens", "", "Custo"].forEach(function (title, index) {
+    ["Aluno", "Tokens", "", "Custo"].forEach(function (title, index) {
       head.appendChild(el("th", index ? { class: "num" } : {}, title));
     });
     table.appendChild(el("thead")).appendChild(head);
     var body = el("tbody");
     data.users.forEach(function (u) {
       var row = el("tr");
-      row.appendChild(el("td", {}, u.user_id));
+      var who = u.name ? u.name + " · " + u.user_id : u.user_id;
+      row.appendChild(el("td", {}, who));
       row.appendChild(el("td", { class: "num" }, integer.format(u.tokens)));
       var barCell = el("td");
       var bar = el("div", { class: "bar" });

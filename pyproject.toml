@@ -5,6 +5,7 @@ description = "Collects token, cost and latency metrics from Langfuse and builds
 requires-python = ">=3.13"
 dependencies = [
     "python-dotenv==1.1.1",
+    "psycopg[binary]==3.3.4",
 ]
 
 [dependency-groups]
