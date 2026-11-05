@@ -89,3 +89,28 @@ por aluno usa a lista do `data.js`, então gere o painel antes.
 Esse conteúdo é dado pessoal dos alunos: perguntas e respostas podem trazer
 informações de terceiros, como o texto de um contrato. Use só no seu
 computador e não exponha o servidor na rede.
+
+## Painel da Vercel
+
+Painel separado, em `vercel/index.html`, com as aplicações (projetos), os deploys
+do período, a taxa de sucesso e a cobrança da Vercel, com custo e consumo por
+serviço.
+
+Configure no `.env` da raiz (já está no `.gitignore`):
+
+- `VERCEL_TOKEN`: token criado em Account Settings > Tokens (obrigatório).
+- `VERCEL_TEAM_ID`: id do time, só se os projetos forem de um time (opcional).
+
+Coleta e geração do arquivo:
+
+```powershell
+$env:PYTHONPATH="src"; .venv\Scripts\python.exe -m vercel_dashboard.build --days 30
+```
+
+Depois, abra `vercel/index.html` no navegador. A cobrança só responde para
+papéis de cobrança ou de dono do time; sem essa permissão, a seção mostra o
+motivo e o resto do painel continua funcionando.
+
+Limites: lista até 100 projetos e até 10 páginas de 100 deploys no período.
+O token é usado só para leitura; nenhum dado da Vercel é gravado fora de
+`vercel/data.js`.

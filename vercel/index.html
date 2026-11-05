@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aplicações Vercel</title>
+  <link rel="stylesheet" href="../dashboard/style.css">
+  <style>
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: var(--line); color: var(--text); }
+    .badge.ok { background: rgba(52, 211, 153, 0.18); color: var(--accent-2); }
+    .badge.fail { background: rgba(248, 113, 113, 0.18); color: #f87171; }
+    .badge.run { background: rgba(251, 191, 36, 0.18); color: var(--warn); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Aplicações e consumo na Vercel</h1>
+        <p id="window" class="muted"></p>
+      </div>
+      <p id="generated" class="muted"></p>
+    </header>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card">
+      <h2>Aplicações</h2>
+      <p class="muted">Uma linha por projeto, com o último deploy e a quantidade no período.</p>
+      <div id="projects"></div>
+    </section>
+
+    <section class="card">
+      <h2>Deploys por dia</h2>
+      <p class="muted">Deploys prontos (verde) e com erro (vermelho) em cada dia.</p>
+      <div class="chart-box"><canvas id="deploysChart" aria-label="Deploys por dia"></canvas></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <h2>Custo da cobrança</h2>
+        <div id="billing"></div>
+      </section>
+
+      <section class="card">
+        <h2>Estados dos deploys</h2>
+        <div id="states"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Deploys recentes</h2>
+      <div id="recent"></div>
+    </section>
+
+    <footer class="muted">
+      Dados da API REST da Vercel, lidos com o token do arquivo .env. Mostra até 100 projetos e os deploys
+      do período (até 10 páginas de 100). A cobrança vem do endpoint de billing, que só responde para papéis
+      de cobrança ou de dono do time; sem essa permissão, a seção mostra o motivo.
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
