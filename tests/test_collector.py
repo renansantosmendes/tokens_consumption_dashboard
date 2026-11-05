@@ -295,3 +295,29 @@ def test_database_url_is_read_from_the_env_file(tmp_path):
     empty.write_text("OUTRA=1\n", encoding="utf-8")
     with pytest.raises(StudentsError):
         load_database_url(empty)
+
+
+def test_daily_latency_is_merged_per_day_across_projects():
+    from dashboard.merge import merge_raw
+
+    agent = {"daily_latency": [{"time_dimension": "2026-11-02", "p50_latency": 100.0, "p95_latency": 300.0, "count_count": 2}]}
+    proxy = {"daily_latency": [{"time_dimension": "2026-11-02", "p50_latency": 400.0, "p95_latency": 900.0, "count_count": 2}]}
+    row = merge_raw([agent, proxy])["daily_latency"][0]
+    assert row["p50_latency"] == pytest.approx(250.0)
+    assert row["p95_latency"] == 900.0
+    assert row["count_count"] == 4.0
+
+
+def test_latency_series_has_a_gap_on_days_without_calls():
+    result = build_dashboard(
+        totals={}, models=[], daily=[], operations=[], users=[],
+        daily_latency=[{"time_dimension": "2026-11-02", "p50_latency": 500.0, "p95_latency": 1500.0, "count_count": 3}],
+        sources=["agente"], usd_brl=5.0, rate_date=None,
+        start=date(2026, 11, 1), end=date(2026, 11, 3),
+        generated_at=datetime(2026, 11, 3, tzinfo=timezone.utc),
+    )
+    series = result["latency_daily"]
+    assert [item["date"] for item in series] == ["2026-11-01", "2026-11-02", "2026-11-03"]
+    assert series[0]["p50_ms"] is None
+    assert series[1]["p50_ms"] == 500.0
+    assert series[1]["calls"] == 3

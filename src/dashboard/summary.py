@@ -107,12 +107,46 @@ def _daily_series(
     return series
 
 
+def _daily_latency_series(rows: list[dict[str, Any]], start: date, end: date) -> list[dict[str, Any]]:
+    """Daily median and 95th percentile latency, None on days without calls.
+
+    Parameters
+    ----------
+    rows : list[dict[str, Any]]
+        Rows of the daily latency query.
+    start : date
+        First day of the window.
+    end : date
+        Last day of the window.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One entry per day, oldest first.
+    """
+    by_day = {str(row.get("time_dimension", ""))[:10]: row for row in rows}
+    series = []
+    current = start
+    while current <= end:
+        key = current.isoformat()
+        row = by_day.get(key, {})
+        series.append({
+            "date": key,
+            "p50_ms": _optional(row.get("p50_latency")),
+            "p95_ms": _optional(row.get("p95_latency")),
+            "calls": int(_number(row.get("count_count"))),
+        })
+        current = date.fromordinal(current.toordinal() + 1)
+    return series
+
+
 def build_dashboard(
     *,
     totals: dict[str, Any],
     models: list[dict[str, Any]],
     daily: list[dict[str, Any]],
     operations: list[dict[str, Any]],
+    daily_latency: list[dict[str, Any]] | None = None,
     users: list[dict[str, Any]],
     sources: list[str],
     student_names: dict[str, str] | None = None,
@@ -202,6 +236,7 @@ def build_dashboard(
             "p50_ms": _optional(totals.get("p50_latency")),
         },
         "daily": _daily_series(daily, usd_brl, start, end),
+        "latency_daily": _daily_latency_series(daily_latency or [], start, end),
         "models": model_rows,
         "operations": operation_rows,
         "users": user_rows,

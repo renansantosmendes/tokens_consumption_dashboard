@@ -207,19 +207,20 @@ def make_handler(state: ViewerState) -> type[BaseHTTPRequestHandler]:
             self._send(200, content_type, target.read_bytes())
 
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
-            """Keep the server quiet.
+            """Print each request on the terminal, so problems can be seen.
 
             Parameters
             ----------
             format : str
-                Log format, not used.
+                Log format of the base handler.
             *args : Any
-                Log arguments, not used.
+                Log arguments of the base handler.
 
             Returns
             -------
             None
             """
+            print(f"{self.address_string()} {format % args}", flush=True)
 
     return Handler
 

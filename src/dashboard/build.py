@@ -128,6 +128,7 @@ def collect_source(client: LangfuseClient, start: str, end: str) -> dict[str, An
         "totals": (client.metrics(queries.totals(start, end)) or [{}])[0],
         "models": client.metrics(queries.by_model(start, end)),
         "daily": client.metrics(queries.daily(start, end)),
+        "daily_latency": client.metrics(queries.daily_latency(start, end)),
         "operations": client.metrics(queries.latency_by_operation(start, end)),
         "users": client.metrics(queries.cost_by_user(start, end)),
     }

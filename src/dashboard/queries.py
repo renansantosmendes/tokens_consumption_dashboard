@@ -118,6 +118,31 @@ def daily(start: str, end: str) -> dict[str, Any]:
     return query
 
 
+def daily_latency(start: str, end: str) -> dict[str, Any]:
+    """Query the median and 95th percentile latency of generations per day.
+
+    Parameters
+    ----------
+    start : str
+        Start of the window.
+    end : str
+        End of the window.
+
+    Returns
+    -------
+    dict[str, Any]
+        Query for the generations, with a daily time dimension.
+    """
+    query = totals(start, end)
+    query["metrics"] = [
+        {"measure": "latency", "aggregation": "p50"},
+        {"measure": "latency", "aggregation": "p95"},
+        {"measure": "count", "aggregation": "count"},
+    ]
+    query["timeDimension"] = {"granularity": "day"}
+    return query
+
+
 def latency_by_operation(start: str, end: str) -> dict[str, Any]:
     """Query the median and 95th percentile latency of each operation name.
 

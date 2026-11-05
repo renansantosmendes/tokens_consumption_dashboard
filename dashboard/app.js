@@ -75,6 +75,29 @@
     });
   }
 
+  function renderLatencyDaily() {
+    if (!window.Chart || !data.latency_daily) return;
+    var rows = data.latency_daily;
+    new Chart(document.getElementById("latencyChart"), {
+      type: "line",
+      data: {
+        labels: rows.map(function (d) { return formatDate(d.date); }),
+        datasets: [
+          { label: "Mediana (s)", data: rows.map(function (d) { return d.p50_ms === null ? null : d.p50_ms / 1000; }),
+            borderColor: "#6ea8ff", backgroundColor: "#6ea8ff", tension: 0.3, spanGaps: false },
+          { label: "p95 (s)", data: rows.map(function (d) { return d.p95_ms === null ? null : d.p95_ms / 1000; }),
+            borderColor: "#fbbf24", backgroundColor: "#fbbf24", borderDash: [6, 5], tension: 0.3, spanGaps: false },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return v.toLocaleString("pt-BR") + " s"; } } } },
+        plugins: { legend: { labels: { color: "#e6eaf5" } } },
+      },
+    });
+  }
+
   function renderModels() {
     var models = data.models;
     if (window.Chart) new Chart(document.getElementById("modelChart"), {
@@ -179,6 +202,7 @@
   renderHeader();
   renderKpis();
   renderDaily();
+  renderLatencyDaily();
   renderModels();
   renderUsers();
   renderOperations();

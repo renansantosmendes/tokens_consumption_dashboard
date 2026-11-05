@@ -156,6 +156,43 @@ def _merge_operations(raws: list[RawData]) -> list[dict[str, Any]]:
     ]
 
 
+def _merge_daily_latency(raws: list[RawData]) -> list[dict[str, Any]]:
+    """Combine the daily latency of the projects.
+
+    Parameters
+    ----------
+    raws : list[RawData]
+        Raw answers of the projects.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One row per day with the weighted median, the highest 95th percentile
+        and the number of calls.
+    """
+    groups: dict[str, dict[str, Any]] = {}
+    for raw in raws:
+        for row in raw.get("daily_latency") or []:
+            day = str(row.get("time_dimension", ""))
+            entry = groups.setdefault(day, {"pairs": [], "p95": None, "calls": 0.0})
+            calls = float(row.get("count_count") or 0)
+            entry["calls"] += calls
+            if isinstance(row.get("p50_latency"), (int, float)):
+                entry["pairs"].append((float(row["p50_latency"]), calls))
+            p95 = row.get("p95_latency")
+            if isinstance(p95, (int, float)) and (entry["p95"] is None or p95 > entry["p95"]):
+                entry["p95"] = float(p95)
+    return [
+        {
+            "time_dimension": day,
+            "p50_latency": _weighted_latency(entry["pairs"]),
+            "p95_latency": entry["p95"],
+            "count_count": entry["calls"],
+        }
+        for day, entry in sorted(groups.items())
+    ]
+
+
 def merge_raw(sources: list[RawData]) -> RawData:
     """Merge the raw answers of each project into one set of rows.
 
@@ -193,6 +230,7 @@ def merge_raw(sources: list[RawData]) -> RawData:
             {"time_dimension": day, **values}
             for day, values in sorted(daily.items(), key=lambda item: str(item[0]))
         ],
+        "daily_latency": _merge_daily_latency(sources),
         "operations": _merge_operations(sources),
         "users": [{"userId": user, **values} for user, values in users.items()],
     }

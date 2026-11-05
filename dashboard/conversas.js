@@ -32,12 +32,22 @@
     });
   }
 
+  var VIEWER_URL = "http://127.0.0.1:8765/";
+  var OFFLINE_MESSAGE =
+    "Não foi possível falar com o visualizador. Abra a página por " + VIEWER_URL +
+    " (não pelo arquivo do disco) e confirme que o comando do visualizador está rodando.";
+
   function request(path) {
+    if (window.location.protocol === "file:") {
+      return Promise.reject(new Error(OFFLINE_MESSAGE));
+    }
     return fetch(path, { headers: { Accept: "application/json" } }).then(function (response) {
       return response.json().then(function (body) {
         if (!response.ok) throw new Error(body.error || "Erro ao consultar o servidor.");
         return body;
       });
+    }, function (error) {
+      throw new Error(OFFLINE_MESSAGE + " Detalhe: " + (error && error.message ? error.message : error) + " (endereço: " + path + ")");
     });
   }
 
