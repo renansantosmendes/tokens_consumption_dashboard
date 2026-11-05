@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consumo de tokens · Langfuse</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Consumo de tokens e custos</h1>
+        <p id="window" class="muted"></p>
+      </div>
+      <p id="generated" class="muted"></p>
+    </header>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card">
+      <h2>Consumo diário</h2>
+      <p class="muted">Custo em reais (barras) e tokens (linha) por dia.</p>
+      <div class="chart-box"><canvas id="dailyChart" aria-label="Custo e tokens por dia"></canvas></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <h2>Custo por modelo</h2>
+        <div class="chart-box small"><canvas id="modelChart" aria-label="Custo por modelo"></canvas></div>
+        <table id="modelTable"></table>
+      </section>
+
+      <section class="card">
+        <h2>Usuários que mais gastaram tokens</h2>
+        <div id="users"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Latência por operação</h2>
+      <p class="muted">
+        Os nomes são os passos internos do agente (LangChain e LangGraph), registrados no Langfuse.
+        As rotas da API (<code>/chat</code>, <code>/upload</code>...) ainda não aparecem aqui.
+      </p>
+      <div id="operations"></div>
+    </section>
+
+    <footer class="muted">
+      Custos vêm do Langfuse, em dólar, e são convertidos para reais pela cotação de venda do PTAX
+      (Banco Central). Modelos sem preço cadastrado no Langfuse aparecem com custo zero.
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

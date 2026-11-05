@@ -1,0 +1,18 @@
+[project]
+name = "tokens-consumption-dashboard"
+version = "0.1.0"
+description = "Collects token, cost and latency metrics from Langfuse and builds a static dashboard."
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv==1.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pylint>=3.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
